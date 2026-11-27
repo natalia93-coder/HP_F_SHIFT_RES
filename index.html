@@ -40,20 +40,6 @@
       font-size: 15px; outline: none;
     }
     textarea { resize: vertical; min-height: 64px; margin-top: 0; }
-    .upload-btn {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 12px; border-radius: 10px;
-      border: 1.5px dashed var(--hint); background: transparent; color: var(--text);
-      font-size: 14px; font-weight: 600; cursor: pointer;
-    }
-    .thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
-    .thumb-wrap { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; }
-    .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
-    .thumb-del {
-      position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
-      border-radius: 50%; border: none; background: rgba(0,0,0,0.75); color: #fff;
-      font-size: 12px; cursor: pointer; line-height: 20px; padding: 0;
-    }
     .submit-btn {
       width: 100%; padding: 14px; border-radius: 12px; border: none;
       background: var(--btn); color: var(--btn-text);
@@ -104,16 +90,7 @@
   </div>
 
   <div class="card">
-    <span class="label">3. Фото X-отчётов (до 10 шт.)</span>
-    <input type="file" id="photoInput" accept="image/*" multiple style="display:none" />
-    <button type="button" class="upload-btn" onclick="document.getElementById('photoInput').click()">
-      📸 Прикрепить фото X-отчётов
-    </button>
-    <div class="thumbs" id="thumbsGrid"></div>
-  </div>
-
-  <div class="card">
-    <span class="label">4. Комментарий к смене (необязательно)</span>
+    <span class="label">3. Комментарий к смене (необязательно)</span>
     <textarea id="commentInput" placeholder="Замечания по кассе или передача смены..."></textarea>
   </div>
 
@@ -180,57 +157,6 @@
     }
     setShiftType(defaultShift);
 
-    // Сжатие фото X-отчётов
-    let attachedPhotos = [];
-    document.getElementById("photoInput").addEventListener("change", async (e) => {
-      const files = Array.from(e.target.files || []);
-      for (const file of files) {
-        if (attachedPhotos.length >= 10) break;
-        attachedPhotos.push(await compressImage(file, 1600, 0.82));
-      }
-      e.target.value = "";
-      renderThumbs();
-    });
-
-    function compressImage(file, maxSide, quality) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const img = new Image();
-          img.onload = () => {
-            let w = img.width, h = img.height;
-            if (w > maxSide || h > maxSide) {
-              if (w > h) { h = Math.round(h * maxSide / w); w = maxSide; }
-              else { w = Math.round(w * maxSide / h); h = maxSide; }
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = w; canvas.height = h;
-            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-            const dataUrl = canvas.toDataURL("image/jpeg", quality);
-            resolve({ previewUrl: dataUrl, base64: dataUrl.split(",")[1] });
-          };
-          img.src = ev.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function renderThumbs() {
-      const grid = document.getElementById("thumbsGrid");
-      grid.innerHTML = "";
-      attachedPhotos.forEach((p, idx) => {
-        const wrap = document.createElement("div");
-        wrap.className = "thumb-wrap";
-        wrap.innerHTML = `<img src="${p.previewUrl}" /><button type="button" class="thumb-del" onclick="removePhoto(${idx})">✕</button>`;
-        grid.appendChild(wrap);
-      });
-    }
-
-    function removePhoto(idx) {
-      attachedPhotos.splice(idx, 1);
-      renderThumbs();
-    }
-
     async function submitShiftReport() {
       const submitBtn = document.getElementById("submitBtn");
       const statusBox = document.getElementById("statusBox");
@@ -246,7 +172,7 @@
           dateIso: dateInput.value,
           shiftType: currentShiftType,
           comment: document.getElementById("commentInput").value.trim(),
-          photos: attachedPhotos.map(p => p.base64)
+          photos: []
         };
 
         const res = await fetch(GAS_WEBAPP_URL, {
